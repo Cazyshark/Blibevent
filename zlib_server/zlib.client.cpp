@@ -6,6 +6,11 @@
 #include<event2/listener.h>
 #define FILEPATHE "1.txt"
 using namespace std;
+struct  ClientStatus{
+    FILE *fp = 0;
+    bool filend = false;
+};
+
 bufferevent_filter_result c_filter_out(evbuffer *s,evbuffer *d,ev_ssize_t limit,bufferevent_flush_mode mode,void* arg){
     cout<<"client filter out"<<endl;
     char data[1024] = {0};
@@ -27,14 +32,29 @@ void c_read_cb(bufferevent *bev,void *arg){
    
 }
 void c_write_cb(bufferevent *bev,void *arg){
-    FILE *fp = (FILE*)arg;
-
+    ClientStatus *status = (ClientStatus*)arg;
+    FILE *fp = status->fp;
+    if (status->filend == true)
+    {   
+        bufferevent *be = bufferevent_get_underlying(bev);
+        evbuffer *evb = bufferevent_get_output(be);
+        int len = evbuffer_get_length(evb);
+        if (len <= 0)
+        {
+            bufferevent_free(bev);
+            delete status;
+            return;
+        }
+        return;
+    }
+    
     cout<<"client_write_cb"<<endl;
     char data[1024] = {0};
     int len = fread(data,1,sizeof(data),fp);
     if(len<=0){
         fclose(fp);
-        bufferevent_free(bev);
+        status->filend=true;
+        bufferevent_flush(bev,EV_WRITE,BEV_FINISHED);
         return;
     }
     bufferevent_write(bev,data,len);
@@ -47,10 +67,13 @@ void client_event_cb(bufferevent*be, short events,void *arg){
     if(events & BEV_EVENT_CONNECTED){
         cout<<"BEV_EVENT_CONNECTED"<<endl;
         bufferevent_write(be,FILEPATHE,strlen(FILEPATHE));
-        bufferevent * bev_filter = bufferevent_filter_new(be,0,c_filter_out,BEV_OPT_CLOSE_ON_FREE,0,0);
+        bufferevent * bev_filter = bufferevent_filter_new(be,0,c_filter_out,BEV_OPT_CLOSE_ON_FREE|BEV_OPT_DEFER_CALLBACKS,0,0);
         FILE* fp = fopen(FILEPATHE,"rb");
+        ClientStatus *status =new ClientStatus();
+        status->fp =fp;
+        status->filend = false;
         cout<<"open file: "<<FILEPATHE<<endl;
-        bufferevent_setcb(bev_filter,c_read_cb,c_write_cb,c_event_cb,fp);
+        bufferevent_setcb(bev_filter,c_read_cb,c_write_cb,c_event_cb,status);
         bufferevent_enable(bev_filter,EV_READ|EV_WRITE);
     }    
 }
