@@ -14,6 +14,10 @@ struct Status
    z_stream* p;
    int recvNum  = 0;
    int writeNum = 0;
+   ~Status(){
+       if(fp) fclose(fp);
+       delete p;
+   }
 };
 
 bufferevent_filter_result filter_in(evbuffer *s,evbuffer *d,ev_ssize_t limit,bufferevent_flush_mode mode,void* arg){
@@ -57,7 +61,7 @@ bufferevent_filter_result filter_in(evbuffer *s,evbuffer *d,ev_ssize_t limit,buf
     evbuffer_drain(s,nread); 
     v_out[0].iov_len = nwrite;
     evbuffer_commit_space(d,v_out,1);
-    //cout<<"server nread= "<<nread<<"  server nwrite= "<<nwrite<<endl;
+    cout<<"server nread= "<<nread<<"  server nwrite= "<<nwrite<<endl;
     status->recvNum += nread;
     status->writeNum +=  nwrite;
     return BEV_OK;
