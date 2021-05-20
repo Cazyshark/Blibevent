@@ -4,6 +4,7 @@
 #include<event2/bufferevent.h>
 #include"zlib.server.cpp"
 #include"zlib.client.cpp"
+#include<unistd.h>
 #include<event2/listener.h>
 using namespace std;
 
