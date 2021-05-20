@@ -4,7 +4,7 @@
 #include<event2/bufferevent.h>
 #include<string.h>
 #include<event2/listener.h>
-#define FILEPATHE "1.txt"
+#define FILEPATHE "1.png"
 using namespace std;
 struct  ClientStatus{
     FILE *fp = 0;
