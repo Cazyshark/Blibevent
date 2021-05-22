@@ -11,7 +11,7 @@
 using namespace std;
 void http_client(evhttp_request *req,void* ctx){
     cout<<"http_client"<<endl;
-    bufferevent *bev = (bufferevent *)ctx;
+    event_base *bev = (evevnt_base *)ctx;
     if(req == nullptr){
         int errcode = EVUTIL_SOCKET_ERROR();
         cout<<"socket error"<<evutil_socket_error_to_string(errcode);
@@ -44,7 +44,7 @@ void http_client(evhttp_request *req,void* ctx){
     
     return ;
 };
-int main(){
+int TestGetHttp(){
     event_base *base = event_base_new();
     string http_url = "http://www.linuxidc.com/upload/2011_09/11091216073073.jpg";
     evhttp_uri *uri =  evhttp_uri_parse(http_url.c_str());
@@ -84,7 +84,7 @@ int main(){
 
     bufferevent *bev = bufferevent_socket_new(base,-1,BEV_OPT_CLOSE_ON_FREE);
     evhttp_connection *even = evhttp_connection_base_bufferevent_new(base,NULL,bev,host,port);
-    evhttp_request *req = evhttp_request_new(http_client,bev);
+    evhttp_request *req = evhttp_request_new(http_client,base);
     evkeyvalq* output_headers=evhttp_request_get_output_headers(req);
     evhttp_add_header(output_headers,"Host",host);
     evhttp_make_request(even,req,EVHTTP_REQ_GET,path);
@@ -94,4 +94,67 @@ int main(){
         event_base_dispatch(base);
         event_base_free(base);
     }
+    return;
+}
+int TestPostHttp(){
+     event_base *base = event_base_new();
+    string http_url = "http://127.0.0.1:8080";
+    evhttp_uri *uri =  evhttp_uri_parse(http_url.c_str());
+    const char *scheme = evhttp_uri_get_scheme(uri);
+    if(scheme == nullptr){
+        cerr<<"shceme is null"<<endl;
+        return -1;
+    }
+    int port = evhttp_uri_get_port(uri);
+    if (port < 0)
+    {
+        if(strcmp(scheme,"http") == 0)
+            port = 80;
+    }
+    
+    const char *host = evhttp_uri_get_host(uri);
+    if(!host){
+        cerr<<"host is null"<<endl;
+        return -1;
+    }
+    const char *path = evhttp_uri_get_path(uri);
+    if (!path)
+    {
+        path ="";
+    }
+    const char *query = evhttp_uri_get_query(uri);
+    if (!query)
+    {
+        query = "/";
+    }
+    
+    cout<<"scheme is "<<scheme<<endl;
+    cout<<"host is "<<host<<endl;
+    cout<<"port is "<<port<<endl;
+    cout<<"path is "<<path<<endl;
+    cout<<"query is"<<query<<endl;
+
+    bufferevent *bev = bufferevent_socket_new(base,-1,BEV_OPT_CLOSE_ON_FREE);
+    evhttp_connection *even = evhttp_connection_base_bufferevent_new(base,NULL,bev,host,port);
+    evhttp_request *req = evhttp_request_new(http_client,base);
+    evkeyvalq* output_headers=evhttp_request_get_output_headers(req);
+    evhttp_add_header(output_headers,"Host",host);
+
+    evbuffer *output = evhttp_request_get_output_buffer(req);
+    evbuffer_add_printf(output,"xcj=%d&b=%d",1,2);
+
+    evhttp_make_request(even,req,EVHTTP_REQ_GET,path);
+
+    cout<<"erro"<<endl;
+    if(base){
+        event_base_dispatch(base);
+        event_base_free(base);
+    }
+    return;
+}
+int main(){
+   cout<<"test http client!"<<endl;
+   TestGetHttp();
+   TestPostHttp();
+   return;
 }
